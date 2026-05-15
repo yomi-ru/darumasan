@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>だるまさんが転んだ MESHシステム</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", sans-serif;
+      background: linear-gradient(135deg, #020617, #111827);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .home {
+      width: min(94vw, 900px);
+      text-align: center;
+    }
+
+    .title {
+      font-size: clamp(34px, 6vw, 64px);
+      font-weight: 900;
+      margin-bottom: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      font-size: clamp(16px, 2.5vw, 22px);
+      color: #cbd5e1;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 28px;
+      padding: 32px 24px;
+      text-decoration: none;
+      color: white;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+      transition: 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 250px;
+      box-sizing: border-box;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+    }
+
+    .icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 52px;
+      margin-bottom: 22px;
+    }
+
+    .parent-icon {
+      background: #ef4444;
+    }
+
+    .player-icon {
+      background: #22c55e;
+    }
+
+    .card-title {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .card-text {
+      color: #d1d5db;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .note {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 16px;
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .footer {
+      margin-top: 22px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    @media (max-width: 720px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="home">
+    <div class="title">だるまさんが転んだ</div>
+
+    <div class="subtitle">
+      MESHの動きセンサとスマートフォンを使った<br />
+      リアルタイム判定システム
+    </div>
+
+    <section class="cards">
+      <a class="card" href="parent/parent.html">
+        <div class="icon parent-icon">👀</div>
+        <div class="card-title">親端末用画面</div>
+        <div class="card-text">
+          スクリーン表示・競技開始・停止・アウト判定を行う画面です。<br />
+          先生・運営者・大型モニター用。
+        </div>
+      </a>
+
+      <a class="card" href="player/player.html">
+        <div class="icon player-icon">🏃</div>
+        <div class="card-title">子端末用画面</div>
+        <div class="card-text">
+          参加者番号を設定し、MESHからのスペースキー入力を送信する画面です。<br />
+          各参加者のスマートフォン用。
+        </div>
+      </a>
+    </section>
+
+    <div class="note">
+      親端末は1台、子端末は参加者ごとに1台ずつ開いてください。<br />
+      子端末では、参加者番号を設定したあと「この画面を有効化」を押してから競技を開始してください。
+    </div>
+
+    <div class="footer">
+      Daruma MESH System
+    </div>
+  </main>
+</body>
+</html>
