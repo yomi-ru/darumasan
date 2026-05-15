@@ -236,13 +236,6 @@
 
         <div id="players" class="players"></div>
 
-        <div class="settings">
-          <div>裏画像：動いてOK</div>
-          <div>表画像：止まれ</div>
-          <div>アウト表示：約1秒で自動解除</div>
-          <div>人数：1〜5番</div>
-        </div>
-
         <div id="log" class="log">未開始</div>
       </div>
     </section>
@@ -270,15 +263,16 @@
       storageBucket: "darumasan-ff1bd.firebasestorage.app",
       messagingSenderId: "714642759200",
       appId: "1:714642759200:web:c2e882eecc94bb598a6645",
-      measurementId: "G-F6FGRBSEHL"
+      measurementId: "G-F6FGRBSEHL",
+      databaseURL: "https://console.firebase.google.com/u/0/project/darumasan-ff1bd/database/darumasan-ff1bd-default-rtdb/data/~2F?hl=ja"
     };
 
     const ROOM_ID = "daruma-main";
 
     const PLAYER_COUNT = 5;
 
-    const DARUMA_FRONT_IMAGE = "images/daruma-front.png";
-    const DARUMA_BACK_IMAGE = "images/daruma-back.png";
+    const DARUMA_FRONT_IMAGE = "images/front.png";
+    const DARUMA_BACK_IMAGE = "images/rear.png";
 
     const RUNNING_MIN_MS = 3000;
     const RUNNING_MAX_MS = 7000;
