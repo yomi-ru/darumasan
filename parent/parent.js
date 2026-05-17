@@ -124,11 +124,11 @@ async function setMode(mode) {
 
   if (mode === "running") {
     darumaImage.src = DARUMA_BACK_IMAGE;
-    modeView.textContent = "動いてOK";
+    modeView.textContent = "だるまさんが";
     modeView.className = "mode running";
   } else if (mode === "stop") {
     darumaImage.src = DARUMA_FRONT_IMAGE;
-    modeView.textContent = "止まれ";
+    modeView.textContent = "転んだ!";
     modeView.className = "mode stop";
   } else {
     darumaImage.src = DARUMA_BACK_IMAGE;
