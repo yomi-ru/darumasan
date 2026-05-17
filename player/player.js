@@ -16,7 +16,7 @@ const firebaseConfig = {
     messagingSenderId: "714642759200",
     appId: "1:714642759200:web:c2e882eecc94bb598a6645",
     measurementId: "G-F6FGRBSEHL",
-    databaseURL: "https://console.firebase.google.com/u/0/project/darumasan-ff1bd/database/darumasan-ff1bd-default-rtdb/data/~2F?hl=ja"
+    databaseURL: "https://darumasan-ff1bd-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 const ROOM_ID = "daruma-main";
