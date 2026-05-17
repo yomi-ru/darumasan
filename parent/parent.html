@@ -9,32 +9,32 @@
 </head>
 
 <body>
-  <main class="container">
-
-    <section class="top-panel">
-      <button id="startGameBtn" class="start-btn">開始</button>
-      <button id="stopGameBtn" class="stop-btn">停止</button>
-      <button id="resetBtn" class="reset-btn">リセット</button>
-    </section>
-
-    <section class="main-grid">
-      <div class="daruma-panel">
-        <img id="darumaImage" class="daruma-img" src="../images/front.png" alt="だるまさん" />
-
-        <div id="modeView" class="mode">待機中</div>
-      </div>
-
-      <div class="side-panel">
-        <div id="turnView" class="turn">ターン：0</div>
-        <div id="message" class="message">開始ボタンを押してください</div>
-
-        <h2>参加者</h2>
-
-        <div id="players" class="players"></div>
-
-        <div id="log" class="log">未開始</div>
+  <main class="screen">
+    <section id="startOverlay" class="start-overlay">
+      <div class="start-card">
+        <div class="mini-title">REALTIME JUDGE</div>
+        <h1>STOP!<br>だるまさん</h1>
+        <p>準備ができたら開始してください</p>
+        <button id="startGameBtn" class="start-btn">開始</button>
       </div>
     </section>
+
+    <section id="gameView" class="game-view">
+      <div id="modeText" class="mode-text">待機中</div>
+
+      <div class="daruma-stage">
+        <img
+          id="darumaImage"
+          class="daruma-img"
+          src="../images/rear.png"
+          alt="だるまさん"
+        />
+      </div>
+
+      <div id="players" class="players"></div>
+    </section>
+
+    <div id="toast" class="toast">Sキーで停止</div>
   </main>
 
   <script type="module" src="parent.js"></script>

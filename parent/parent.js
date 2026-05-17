@@ -6,10 +6,7 @@ import {
   update,
   remove,
   onValue,
-  onChildAdded,
-  query,
-  orderByChild,
-  startAt
+  onChildAdded
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
 const firebaseConfig = {
@@ -41,16 +38,12 @@ const OUT_DISPLAY_MS = 1000;
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+const startOverlay = document.getElementById("startOverlay");
 const startGameBtn = document.getElementById("startGameBtn");
-const stopGameBtn = document.getElementById("stopGameBtn");
-const resetBtn = document.getElementById("resetBtn");
 
 const darumaImage = document.getElementById("darumaImage");
-const modeView = document.getElementById("modeView");
-const turnView = document.getElementById("turnView");
-const message = document.getElementById("message");
+const modeText = document.getElementById("modeText");
 const playersView = document.getElementById("players");
-const log = document.getElementById("log");
 
 let currentMode = "idle";
 let isGameRunning = false;
@@ -63,10 +56,6 @@ const playerCards = new Map();
 
 function basePath() {
   return `daruma/${ROOM_ID}`;
-}
-
-function showLog(text) {
-  log.textContent = text;
 }
 
 function randomMs(min, max) {
@@ -109,80 +98,66 @@ function showOutPlayer(playerNo) {
   if (card) {
     card.classList.add("out");
   }
-
-  message.textContent = `${playerNo} 番 アウト！`;
 }
 
 async function setMode(mode) {
   currentMode = mode;
+
+  modeText.className = "mode-text";
+  darumaImage.className = "daruma-img";
+
+  if (mode === "running") {
+    darumaImage.src = DARUMA_BACK_IMAGE;
+    darumaImage.classList.add("running");
+
+    modeText.textContent = "だるまさんが";
+    modeText.classList.add("running");
+  } else if (mode === "stop") {
+    darumaImage.src = DARUMA_FRONT_IMAGE;
+    darumaImage.classList.add("stop");
+
+    modeText.textContent = "転んだ！";
+    modeText.classList.add("stop");
+  } else {
+    darumaImage.src = DARUMA_BACK_IMAGE;
+    modeText.textContent = "待機中";
+  }
 
   await update(ref(db, `${basePath()}/state`), {
     mode,
     turn,
     updatedAt: Date.now()
   });
-
-  if (mode === "running") {
-    darumaImage.src = DARUMA_BACK_IMAGE;
-    modeView.textContent = "だるまさんが";
-    modeView.className = "mode running";
-  } else if (mode === "stop") {
-    darumaImage.src = DARUMA_FRONT_IMAGE;
-    modeView.textContent = "転んだ!";
-    modeView.className = "mode stop";
-  } else {
-    darumaImage.src = DARUMA_BACK_IMAGE;
-    modeView.textContent = "待機中";
-    modeView.className = "mode";
-  }
 }
 
 async function startGame() {
-  if (isGameRunning) {
-    showLog("すでに進行中です");
-    return;
-  }
+  if (isGameRunning) return;
 
   isGameRunning = true;
   sessionStartTime = Date.now();
   turn = 0;
   stopPhaseResolved = false;
 
+  startOverlay.classList.add("hidden");
+
   await remove(ref(db, `${basePath()}/events`));
   await remove(ref(db, `${basePath()}/violations`));
 
   clearOutDisplay();
-  showLog("ゲーム開始");
-  message.textContent = "ゲーム開始！";
 
-  nextRunningPhase();
+  await nextRunningPhase();
 }
 
 async function stopGame() {
+  if (!isGameRunning) return;
+
   isGameRunning = false;
   clearTimer();
 
   await setMode("idle");
 
   clearOutDisplay();
-  message.textContent = "停止中";
-  showLog("ゲームを停止しました");
-}
-
-async function resetGame() {
-  isGameRunning = false;
-  clearTimer();
-  turn = 0;
-  stopPhaseResolved = false;
-
-  await remove(ref(db, `${basePath()}/events`));
-  await remove(ref(db, `${basePath()}/violations`));
-  await setMode("idle");
-
-  clearOutDisplay();
-  turnView.textContent = "ターン：0";
-  message.textContent = "開始ボタンを押してください";
-  showLog("リセットしました");
+  startOverlay.classList.remove("hidden");
 }
 
 async function nextRunningPhase() {
@@ -192,18 +167,16 @@ async function nextRunningPhase() {
   clearOutDisplay();
 
   turn++;
-  turnView.textContent = `ターン：${turn}`;
-  message.textContent = "進め！";
   stopPhaseResolved = false;
 
   await setMode("running");
 
   const duration = randomMs(RUNNING_MIN_MS, RUNNING_MAX_MS);
 
-  showLog(`running：${duration / 1000}秒`);
-
   timerId = setTimeout(() => {
-    nextStopPhase();
+    nextStopPhase().catch((error) => {
+      console.error(error);
+    });
   }, duration);
 }
 
@@ -212,18 +185,17 @@ async function nextStopPhase() {
 
   clearTimer();
 
-  message.textContent = "止まれ！";
   stopPhaseResolved = false;
 
   await setMode("stop");
 
   const duration = randomMs(STOP_MIN_MS, STOP_MAX_MS);
 
-  showLog(`stop：${duration / 1000}秒`);
-
   timerId = setTimeout(() => {
     if (!stopPhaseResolved) {
-      nextRunningPhase();
+      nextRunningPhase().catch((error) => {
+        console.error(error);
+      });
     }
   }, duration);
 }
@@ -243,30 +215,27 @@ async function handleViolation(playerNo) {
   });
 
   showOutPlayer(playerNo);
-  showLog(`${playerNo}番がアウト`);
 
   timerId = setTimeout(() => {
     clearOutDisplay();
 
     if (isGameRunning) {
-      nextRunningPhase();
+      nextRunningPhase().catch((error) => {
+        console.error(error);
+      });
     }
   }, OUT_DISPLAY_MS);
 }
 
 function listenEvents() {
-  const eventsQuery = query(
-    ref(db, `${basePath()}/events`),
-    orderByChild("clientTime"),
-    startAt(sessionStartTime)
-  );
-
-  onChildAdded(eventsQuery, async (snapshot) => {
+  onChildAdded(ref(db, `${basePath()}/events`), async (snapshot) => {
     const event = snapshot.val();
 
     if (!event || !event.playerNo) return;
 
-    showLog(`受信：${event.playerNo}番`);
+    if (!event.clientTime || event.clientTime < sessionStartTime) {
+      return;
+    }
 
     await handleViolation(event.playerNo);
   });
@@ -282,10 +251,23 @@ function listenStateFromFirebase() {
   });
 }
 
+document.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+
+  if (key === "s") {
+    stopGame().catch((error) => {
+      console.error(error);
+    });
+  }
+});
+
 createPlayerCards();
 listenEvents();
 listenStateFromFirebase();
 
-startGameBtn.addEventListener("click", startGame);
-stopGameBtn.addEventListener("click", stopGame);
-resetBtn.addEventListener("click", resetGame);
+startGameBtn.addEventListener("click", () => {
+  startGame().catch((error) => {
+    console.error(error);
+    alert("開始に失敗しました：" + error.message);
+  });
+});
