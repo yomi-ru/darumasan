@@ -27,6 +27,9 @@ const PLAYER_COUNT = 5;
 const DARUMA_FRONT_IMAGE = "../images/front.png";
 const DARUMA_BACK_IMAGE = "../images/rear.png";
 
+const RUNNING_AUDIO = "../audio/Yoichi.m4a";
+const RUNNING_AUDIO_ORIGINAL_MS = 2420;
+
 const RUNNING_MIN_MS = 3000;
 const RUNNING_MAX_MS = 7000;
 
@@ -52,6 +55,8 @@ let turn = 0;
 let stopPhaseResolved = false;
 let sessionStartTime = Date.now();
 
+let runningAudio = null;
+
 const playerCards = new Map();
 
 function basePath() {
@@ -60,6 +65,34 @@ function basePath() {
 
 function randomMs(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function stopRunningAudio() {
+  if (!runningAudio) return;
+
+  runningAudio.pause();
+  runningAudio.currentTime = 0;
+  runningAudio = null;
+}
+
+function playRunningAudioForDuration(durationMs) {
+  stopRunningAudio();
+
+  runningAudio = new Audio(RUNNING_AUDIO);
+
+  const playbackRate = RUNNING_AUDIO_ORIGINAL_MS / durationMs;
+
+  runningAudio.playbackRate = playbackRate;
+
+  runningAudio.preservesPitch = true;
+  runningAudio.mozPreservesPitch = true;
+  runningAudio.webkitPreservesPitch = true;
+
+  runningAudio.currentTime = 0;
+
+  runningAudio.play().catch((error) => {
+    console.error("音声再生エラー:", error);
+  });
 }
 
 function clearTimer() {
@@ -153,6 +186,7 @@ async function stopGame() {
 
   isGameRunning = false;
   clearTimer();
+  stopRunningAudio();
 
   await setMode("idle");
 
@@ -173,7 +207,11 @@ async function nextRunningPhase() {
 
   const duration = randomMs(RUNNING_MIN_MS, RUNNING_MAX_MS);
 
+  playRunningAudioForDuration(duration);
+
   timerId = setTimeout(() => {
+    stopRunningAudio();
+
     nextStopPhase().catch((error) => {
       console.error(error);
     });
@@ -184,6 +222,7 @@ async function nextStopPhase() {
   if (!isGameRunning) return;
 
   clearTimer();
+  stopRunningAudio();
 
   stopPhaseResolved = false;
 
@@ -207,6 +246,7 @@ async function handleViolation(playerNo) {
 
   stopPhaseResolved = true;
   clearTimer();
+  stopRunningAudio();
 
   await set(ref(db, `${basePath()}/violations/${playerNo}`), {
     playerNo,
