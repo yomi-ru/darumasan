@@ -33,7 +33,7 @@ const RUNNING_MAX_MS = 7000;
 const STOP_MIN_MS = 5000;
 const STOP_MAX_MS = 5000;
 
-const OUT_DISPLAY_MS = 1000;
+const OUT_DISPLAY_MS = 5000;
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
