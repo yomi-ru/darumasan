@@ -54,6 +54,7 @@ function saveSettings() {
     listenGameState();
 
     showLog(`参加者 ${playerNo} として待機中`);
+    document.body.tabIndex = -1;
     document.body.focus();
 }
 
@@ -76,7 +77,7 @@ function listenGameState() {
     });
 }
 
-async function sendSpaceEvent() {
+async function sendPlayerEvent(type) {
     if (!playerNo) {
         showLog("先に参加者番号を設定してね！");
         return;
@@ -95,24 +96,48 @@ async function sendSpaceEvent() {
 
     await set(eventRef, {
         playerNo,
+        type,
         clientTime: now,
         createdAt: serverTimestamp()
     });
 
-    showLog(`送信しました：参加者 ${playerNo}`);
+    if (type === "finish") {
+        showLog(`ゴール送信：参加者 ${playerNo}`);
+    } else {
+        showLog(`動き検知送信：参加者 ${playerNo}`);
+    }
 }
 
 saveBtn.addEventListener("click", saveSettings);
 
 focusBtn.addEventListener("click", () => {
+    playerNoInput.blur();
+    saveBtn.blur();
+    focusBtn.blur();
+
+    document.body.tabIndex = -1;
     document.body.focus();
-    showLog("画面を有効化しました。スペースキー入力を待機中");
+
+    showLog("画面を有効化しました。Spaceで動き検知、Enterでゴール送信");
 });
 
 document.addEventListener("keydown", (event) => {
     if (event.code === "Space" || event.key === " ") {
         event.preventDefault();
-        sendSpaceEvent();
+
+        sendPlayerEvent("move").catch((error) => {
+            console.error(error);
+            showLog("送信エラー：" + error.message);
+        });
+    }
+
+    if (event.code === "Enter" || event.key === "Enter") {
+        event.preventDefault();
+
+        sendPlayerEvent("finish").catch((error) => {
+            console.error(error);
+            showLog("送信エラー：" + error.message);
+        });
     }
 });
 

@@ -58,6 +58,7 @@ let sessionStartTime = Date.now();
 let runningAudio = null;
 
 const playerCards = new Map();
+const finishedPlayers = new Set();
 
 function basePath() {
   return `daruma/${ROOM_ID}`;
@@ -123,14 +124,41 @@ function clearOutDisplay() {
   }
 }
 
+function clearAllPlayerStatus() {
+  finishedPlayers.clear();
+
+  for (const card of playerCards.values()) {
+    card.classList.remove("out");
+    card.classList.remove("finished");
+  }
+}
+
 function showOutPlayer(playerNo) {
   clearOutDisplay();
 
   const card = playerCards.get(String(playerNo));
 
-  if (card) {
+  if (card && !finishedPlayers.has(String(playerNo))) {
     card.classList.add("out");
   }
+}
+
+async function showFinishedPlayer(playerNo) {
+  const no = String(playerNo);
+  finishedPlayers.add(no);
+
+  const card = playerCards.get(no);
+
+  if (card) {
+    card.classList.remove("out");
+    card.classList.add("finished");
+  }
+
+  await set(ref(db, `${basePath()}/finished/${no}`), {
+    playerNo: no,
+    turn,
+    time: Date.now()
+  });
 }
 
 async function setMode(mode) {
@@ -175,8 +203,9 @@ async function startGame() {
 
   await remove(ref(db, `${basePath()}/events`));
   await remove(ref(db, `${basePath()}/violations`));
+  await remove(ref(db, `${basePath()}/finished`));
 
-  clearOutDisplay();
+  clearAllPlayerStatus();
 
   await nextRunningPhase();
 }
@@ -243,6 +272,7 @@ async function handleViolation(playerNo) {
   if (!isGameRunning) return;
   if (currentMode !== "stop") return;
   if (stopPhaseResolved) return;
+  if (finishedPlayers.has(String(playerNo))) return;
 
   stopPhaseResolved = true;
   clearTimer();
@@ -267,6 +297,12 @@ async function handleViolation(playerNo) {
   }, OUT_DISPLAY_MS);
 }
 
+async function handleFinish(playerNo) {
+  if (!isGameRunning) return;
+
+  await showFinishedPlayer(playerNo);
+}
+
 function listenEvents() {
   onChildAdded(ref(db, `${basePath()}/events`), async (snapshot) => {
     const event = snapshot.val();
@@ -274,6 +310,11 @@ function listenEvents() {
     if (!event || !event.playerNo) return;
 
     if (!event.clientTime || event.clientTime < sessionStartTime) {
+      return;
+    }
+
+    if (event.type === "finish") {
+      await handleFinish(event.playerNo);
       return;
     }
 

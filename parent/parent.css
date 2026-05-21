@@ -17,8 +17,8 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Yu Gothic", sans-serif;
   background:
-    radial-gradient(circle at 50% 18%, rgba(239, 68, 68, 0.22), transparent 34%),
-    radial-gradient(circle at 50% 100%, rgba(250, 204, 21, 0.12), transparent 38%),
+    radial-gradient(circle at 38% 18%, rgba(239, 68, 68, 0.22), transparent 34%),
+    radial-gradient(circle at 70% 100%, rgba(250, 204, 21, 0.12), transparent 38%),
     var(--bg);
   color: white;
   min-height: 100vh;
@@ -107,15 +107,20 @@ body {
 .game-view {
   width: 100%;
   height: 100%;
-  padding: 26px 34px 28px;
+  padding: 28px 34px;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "mode players"
+    "daruma players";
+  gap: 22px;
   align-items: center;
-  justify-items: center;
-  gap: 10px;
 }
 
 .mode-text {
+  grid-area: mode;
+  justify-self: center;
   min-height: 76px;
   padding: 10px 36px;
   border-radius: 999px;
@@ -140,6 +145,7 @@ body {
 }
 
 .daruma-stage {
+  grid-area: daruma;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -151,7 +157,7 @@ body {
 .daruma-stage::before {
   content: "";
   position: absolute;
-  width: min(72vh, 72vw, 760px);
+  width: min(72vh, 58vw, 760px);
   aspect-ratio: 1 / 1;
   border-radius: 999px;
   background: rgba(239, 68, 68, 0.22);
@@ -161,7 +167,7 @@ body {
 
 .daruma-img {
   position: relative;
-  width: min(70vh, 72vw, 760px);
+  width: min(72vh, 58vw, 760px);
   max-height: 100%;
   object-fit: contain;
   filter:
@@ -182,22 +188,30 @@ body {
 }
 
 .players {
-  width: min(92vw, 760px);
+  grid-area: players;
+  align-self: center;
+  justify-self: stretch;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  padding-bottom: 4px;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+  padding: 18px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.36);
 }
 
 .player-card {
-  height: clamp(54px, 8vh, 82px);
-  border-radius: 20px;
+  height: clamp(74px, 13vh, 128px);
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.10);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: white;
   display: grid;
   place-items: center;
-  font-size: clamp(26px, 4vw, 48px);
+  font-size: clamp(38px, 5vw, 72px);
   font-weight: 1000;
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.28),
@@ -207,11 +221,19 @@ body {
 
 .player-card.out {
   background: linear-gradient(180deg, #ff4d4d, #dc2626);
-  transform: scale(1.1);
+  transform: scale(1.06);
   box-shadow:
     0 0 0 5px rgba(239, 68, 68, 0.34),
     0 0 58px rgba(239, 68, 68, 0.95);
   animation: outShake 0.16s linear infinite alternate;
+}
+
+.player-card.finished {
+  background: linear-gradient(180deg, #34d399, #16a34a);
+  color: #052e16;
+  box-shadow:
+    0 0 0 5px rgba(34, 197, 94, 0.28),
+    0 0 48px rgba(34, 197, 94, 0.72);
 }
 
 .toast {
@@ -245,17 +267,28 @@ body {
 
 @keyframes outShake {
   from {
-    transform: scale(1.1) rotate(-1deg);
+    transform: scale(1.06) rotate(-1deg);
   }
 
   to {
-    transform: scale(1.1) rotate(1deg);
+    transform: scale(1.06) rotate(1deg);
   }
 }
 
 @media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
   .game-view {
-    padding: 18px 14px 18px;
+    min-height: 100vh;
+    padding: 18px 14px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(320px, 1fr) auto;
+    grid-template-areas:
+      "mode"
+      "daruma"
+      "players";
   }
 
   .daruma-img {
@@ -263,11 +296,15 @@ body {
   }
 
   .players {
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
+    padding: 10px;
   }
 
   .player-card {
+    height: clamp(56px, 10vh, 90px);
     border-radius: 14px;
+    font-size: clamp(28px, 7vw, 48px);
   }
 
   .toast {
