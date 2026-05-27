@@ -27,8 +27,8 @@ const DARUMA_FRONT_IMAGE = "../images/front.png";
 const DARUMA_BACK_IMAGE = "../images/rear.png";
 
 /* 音声ファイル */
-const DARUMA_SANGA_AUDIO = "../audio/darumasanga.m4a";
-const KORONDA_AUDIO = "../audio/koronda.m4a";
+const DARUMA_SANGA_AUDIO = "../audio/Darumasanga.m4a";
+const KORONDA_AUDIO = "../audio/Koronda.m4a";
 
 /* 音源そのものの長さ */
 const DARUMA_SANGA_ORIGINAL_MS = 1410;
