@@ -31,7 +31,7 @@ const RUNNING_AUDIO = "../audio/Yoichi.m4a";
 const RUNNING_AUDIO_ORIGINAL_MS = 2420;
 
 const RUNNING_MIN_MS = 3000;
-const RUNNING_MAX_MS = 7000;
+const RUNNING_MAX_MS = 5000;
 
 const STOP_MIN_MS = 5000;
 const STOP_MAX_MS = 5000;
