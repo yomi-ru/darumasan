@@ -21,21 +21,37 @@ const firebaseConfig = {
 };
 
 const ROOM_ID = "daruma-main";
-
 const PLAYER_COUNT = 5;
 
 const DARUMA_FRONT_IMAGE = "../images/front.png";
 const DARUMA_BACK_IMAGE = "../images/rear.png";
 
-const RUNNING_AUDIO = "../audio/Yoichi.m4a";
-const RUNNING_AUDIO_ORIGINAL_MS = 2420;
+/* 音声ファイル */
+const DARUMA_SANGA_AUDIO = "../audio/darumasanga.m4a";
+const KORONDA_AUDIO = "../audio/koronda.m4a";
 
-const RUNNING_MIN_MS = 3000;
-const RUNNING_MAX_MS = 5000;
+/* 音源そのものの長さ */
+const DARUMA_SANGA_ORIGINAL_MS = 1410;
+const KORONDA_ORIGINAL_MS = 1000;
 
-const STOP_MIN_MS = 5000;
-const STOP_MAX_MS = 5000;
+/*
+ * 1回の「だるまさんがころんだ」演出時間
+ * 3000ms〜5000msの中からランダムに決定する
+ */
+const CALL_TOTAL_MIN_MS = 3000;
+const CALL_TOTAL_MAX_MS = 5000;
 
+/* 「だるまさんが」と「ころんだ」の間の長さ */
+const GAP_MIN_MS = 10;
+const GAP_MAX_MS = 550;
+
+/*
+ * 「ころんだ！」になってから次ターンへ進むまでの時間
+ * 判定時間を確保するため、現在は5秒に設定
+ */
+const STOP_JUDGE_MS = 5000;
+
+/* アウト表示時間 */
 const OUT_DISPLAY_MS = 5000;
 
 const app = initializeApp(firebaseConfig);
@@ -55,7 +71,7 @@ let turn = 0;
 let stopPhaseResolved = false;
 let sessionStartTime = Date.now();
 
-let runningAudio = null;
+let activeAudio = null;
 
 const playerCards = new Map();
 const finishedPlayers = new Set();
@@ -68,39 +84,82 @@ function randomMs(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function stopRunningAudio() {
-  if (!runningAudio) return;
-
-  runningAudio.pause();
-  runningAudio.currentTime = 0;
-  runningAudio = null;
-}
-
-function playRunningAudioForDuration(durationMs) {
-  stopRunningAudio();
-
-  runningAudio = new Audio(RUNNING_AUDIO);
-
-  const playbackRate = RUNNING_AUDIO_ORIGINAL_MS / durationMs;
-
-  runningAudio.playbackRate = playbackRate;
-
-  runningAudio.preservesPitch = true;
-  runningAudio.mozPreservesPitch = true;
-  runningAudio.webkitPreservesPitch = true;
-
-  runningAudio.currentTime = 0;
-
-  runningAudio.play().catch((error) => {
-    console.error("音声再生エラー:", error);
-  });
-}
-
 function clearTimer() {
   if (timerId) {
     clearTimeout(timerId);
     timerId = null;
   }
+}
+
+function stopAudio() {
+  if (!activeAudio) return;
+
+  activeAudio.pause();
+  activeAudio.currentTime = 0;
+  activeAudio = null;
+}
+
+function playAudio(path, playbackRate = 1) {
+  stopAudio();
+
+  activeAudio = new Audio(path);
+  activeAudio.playbackRate = playbackRate;
+
+  /*
+   * 対応ブラウザでは、
+   * 再生速度を変えても声の高さが変わりにくいようにする
+   */
+  activeAudio.preservesPitch = true;
+  activeAudio.mozPreservesPitch = true;
+  activeAudio.webkitPreservesPitch = true;
+
+  activeAudio.currentTime = 0;
+
+  activeAudio.play().catch((error) => {
+    console.error("音声再生エラー:", error);
+  });
+}
+
+/*
+ * 1ターン分の音声タイミングを決定する
+ *
+ * 例：
+ * totalMs = 4000ms
+ * darumaSangaMs = 2000ms
+ * gapMs = 300ms
+ * korondaMs = 1000ms（等倍固定）
+ * remainingMs = 700ms
+ */
+function createCallTiming() {
+  const totalMs = randomMs(CALL_TOTAL_MIN_MS, CALL_TOTAL_MAX_MS);
+
+  /*
+   * 「だるまさんが」は全体時間の1/2にする
+   */
+  const darumaSangaMs = Math.round(totalMs / 2);
+
+  /*
+   * 「ころんだ」は1000msの等倍再生なので、
+   * 全体時間内に収まるように間の最大値を自動調整する
+   */
+  const availableGapMax = totalMs - darumaSangaMs - KORONDA_ORIGINAL_MS;
+  const safeGapMax = Math.min(GAP_MAX_MS, availableGapMax);
+
+  const gapMs = randomMs(GAP_MIN_MS, Math.max(GAP_MIN_MS, safeGapMax));
+
+  /*
+   * 音声再生後に余る時間
+   * 演出タイミング確認用として算出している
+   */
+  const remainingMs =
+    totalMs - darumaSangaMs - gapMs - KORONDA_ORIGINAL_MS;
+
+  return {
+    totalMs,
+    darumaSangaMs,
+    gapMs,
+    remainingMs
+  };
 }
 
 function createPlayerCards() {
@@ -145,6 +204,7 @@ function showOutPlayer(playerNo) {
 
 async function showFinishedPlayer(playerNo) {
   const no = String(playerNo);
+
   finishedPlayers.add(no);
 
   const card = playerCards.get(no);
@@ -214,8 +274,9 @@ async function stopGame() {
   if (!isGameRunning) return;
 
   isGameRunning = false;
+
   clearTimer();
-  stopRunningAudio();
+  stopAudio();
 
   await setMode("idle");
 
@@ -223,51 +284,88 @@ async function stopGame() {
   startOverlay.classList.remove("hidden");
 }
 
+/*
+ * 裏向きのだるまを表示し、
+ * 「だるまさんが」の音声を可変速で再生する
+ */
 async function nextRunningPhase() {
   if (!isGameRunning) return;
 
   clearTimer();
+  stopAudio();
   clearOutDisplay();
 
   turn++;
   stopPhaseResolved = false;
 
+  const timing = createCallTiming();
+
   await setMode("running");
 
-  const duration = randomMs(RUNNING_MIN_MS, RUNNING_MAX_MS);
+  /*
+   * 1410msの音声を、全体時間の1/2の長さに合わせる
+   *
+   * 例：
+   * 1410msの音声を2000msにしたい場合
+   * playbackRate = 1410 / 2000 = 0.705倍速
+   */
+  const darumaSangaPlaybackRate =
+    DARUMA_SANGA_ORIGINAL_MS / timing.darumaSangaMs;
 
-  playRunningAudioForDuration(duration);
+  playAudio(DARUMA_SANGA_AUDIO, darumaSangaPlaybackRate);
 
+  console.log("音声タイミング:", {
+    totalMs: timing.totalMs,
+    darumaSangaMs: timing.darumaSangaMs,
+    gapMs: timing.gapMs,
+    korondaMs: KORONDA_ORIGINAL_MS,
+    remainingMs: timing.remainingMs,
+    darumaSangaPlaybackRate
+  });
+
+  /*
+   * 「だるまさんが」が終わったあと、
+   * ランダムな間を入れて「ころんだ」に進む
+   */
   timerId = setTimeout(() => {
-    stopRunningAudio();
+    stopAudio();
 
-    nextStopPhase().catch((error) => {
-      console.error(error);
-    });
-  }, duration);
+    timerId = setTimeout(() => {
+      nextStopPhase(timing).catch((error) => {
+        console.error(error);
+      });
+    }, timing.gapMs);
+  }, timing.darumaSangaMs);
 }
 
-async function nextStopPhase() {
+/*
+ * 「ころんだ」を等倍速で再生し、
+ * 音声が最後まで終わった瞬間からstop判定を開始する
+ */
+async function nextStopPhase(timing) {
   if (!isGameRunning) return;
 
   clearTimer();
-  stopRunningAudio();
+  stopAudio();
 
   stopPhaseResolved = false;
+  playAudio(KORONDA_AUDIO, 1);
 
-  await setMode("stop");
+  timerId = setTimeout(async () => {
+    if (!isGameRunning) return;
+    stopAudio();
+    await setMode("stop");
 
-  const duration = randomMs(STOP_MIN_MS, STOP_MAX_MS);
+    timerId = setTimeout(() => {
+      if (!stopPhaseResolved) {
+        nextRunningPhase().catch((error) => {
+          console.error(error);
+        });
+      }
+    }, STOP_JUDGE_MS);
 
-  timerId = setTimeout(() => {
-    if (!stopPhaseResolved) {
-      nextRunningPhase().catch((error) => {
-        console.error(error);
-      });
-    }
-  }, duration);
+  }, KORONDA_ORIGINAL_MS);
 }
-
 async function handleViolation(playerNo) {
   if (!isGameRunning) return;
   if (currentMode !== "stop") return;
@@ -275,8 +373,9 @@ async function handleViolation(playerNo) {
   if (finishedPlayers.has(String(playerNo))) return;
 
   stopPhaseResolved = true;
+
   clearTimer();
-  stopRunningAudio();
+  stopAudio();
 
   await set(ref(db, `${basePath()}/violations/${playerNo}`), {
     playerNo,
@@ -332,6 +431,9 @@ function listenStateFromFirebase() {
   });
 }
 
+/*
+ * 親端末でSキーを押すと競技停止
+ */
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
 
