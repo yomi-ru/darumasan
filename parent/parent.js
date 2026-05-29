@@ -75,6 +75,7 @@ let activeAudio = null;
 
 const playerCards = new Map();
 const finishedPlayers = new Set();
+const outPlayersThisTurn = new Set();
 
 function basePath() {
   return `daruma/${ROOM_ID}`;
@@ -181,6 +182,8 @@ function clearOutDisplay() {
   for (const card of playerCards.values()) {
     card.classList.remove("out");
   }
+
+  outPlayersThisTurn.clear();
 }
 
 function clearAllPlayerStatus() {
@@ -193,11 +196,10 @@ function clearAllPlayerStatus() {
 }
 
 function showOutPlayer(playerNo) {
-  clearOutDisplay();
+  const no = String(playerNo);
+  const card = playerCards.get(no);
 
-  const card = playerCards.get(String(playerNo));
-
-  if (card && !finishedPlayers.has(String(playerNo))) {
+  if (card && !finishedPlayers.has(no)) {
     card.classList.add("out");
   }
 }
@@ -369,31 +371,45 @@ async function nextStopPhase(timing) {
 async function handleViolation(playerNo) {
   if (!isGameRunning) return;
   if (currentMode !== "stop") return;
-  if (stopPhaseResolved) return;
-  if (finishedPlayers.has(String(playerNo))) return;
 
-  stopPhaseResolved = true;
+  const no = String(playerNo);
 
-  clearTimer();
-  stopAudio();
+  if (finishedPlayers.has(no)) return;
 
-  await set(ref(db, `${basePath()}/violations/${playerNo}`), {
-    playerNo,
+  // 同じターン中に同じチームが何度も送信された場合は無視
+  if (outPlayersThisTurn.has(no)) return;
+
+  outPlayersThisTurn.add(no);
+
+  /*
+   * 最初のアウトが発生した時だけ、
+   * 次ターンへ進むためのタイマーを設定する。
+   * その後に同時入力された別チームのアウトは受け付ける。
+   */
+  if (!stopPhaseResolved) {
+    stopPhaseResolved = true;
+
+    clearTimer();
+    stopAudio();
+
+    timerId = setTimeout(() => {
+      clearOutDisplay();
+
+      if (isGameRunning) {
+        nextRunningPhase().catch((error) => {
+          console.error(error);
+        });
+      }
+    }, OUT_DISPLAY_MS);
+  }
+
+  await set(ref(db, `${basePath()}/violations/${turn}/${no}`), {
+    playerNo: no,
     turn,
     time: Date.now()
   });
 
-  showOutPlayer(playerNo);
-
-  timerId = setTimeout(() => {
-    clearOutDisplay();
-
-    if (isGameRunning) {
-      nextRunningPhase().catch((error) => {
-        console.error(error);
-      });
-    }
-  }, OUT_DISPLAY_MS);
+  showOutPlayer(no);
 }
 
 async function handleFinish(playerNo) {

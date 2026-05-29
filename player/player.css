@@ -84,3 +84,54 @@ button {
 .safe {
     background: #22c55e;
 }
+
+.team-setting {
+    display: grid;
+    gap: 14px;
+    margin: 20px 0;
+}
+
+.team-input-box {
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.team-input-box.upper {
+    border-color: rgba(56, 189, 248, 0.45);
+}
+
+.team-input-box.lower {
+    border-color: rgba(250, 204, 21, 0.45);
+}
+
+.key-label {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #facc15;
+}
+
+.team-input-box.upper .key-label {
+    color: #38bdf8;
+}
+
+.team-input-box label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.team-input-box input {
+    width: 100%;
+}
+
+.registered-teams {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.07);
+    font-weight: 700;
+    line-height: 1.8;
+}
