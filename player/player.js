@@ -20,45 +20,109 @@ const firebaseConfig = {
 };
 
 const ROOM_ID = "daruma-main";
+const DEBOUNCE_MS = 700;
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const playerNoInput = document.getElementById("playerNo");
+const upperPlayerNoInput = document.getElementById("upperPlayerNo");
+const lowerPlayerNoInput = document.getElementById("lowerPlayerNo");
+
 const saveBtn = document.getElementById("saveBtn");
 const focusBtn = document.getElementById("focusBtn");
+
+const registeredTeams = document.getElementById("registeredTeams");
 const log = document.getElementById("log");
 const modeText = document.getElementById("modeText");
 const stateBox = document.getElementById("stateBox");
 
-let playerNo = localStorage.getItem("daruma_playerNo") || "";
-let lastSendTime = 0;
+let upperPlayerNo = localStorage.getItem("daruma_upperPlayerNo") || "";
+let lowerPlayerNo = localStorage.getItem("daruma_lowerPlayerNo") || "";
 
-const debounceMs = 700;
+let lastUpperSendTime = 0;
+let lastLowerSendTime = 0;
+let isStateListening = false;
 
-playerNoInput.value = playerNo;
+upperPlayerNoInput.value = upperPlayerNo;
+lowerPlayerNoInput.value = lowerPlayerNo;
 
 function showLog(message) {
     log.textContent = message;
 }
 
-function saveSettings() {
-    playerNo = playerNoInput.value.trim();
-
-    if (!playerNo) {
-        alert("参加者番号を入力してね！");
-        return;
+function isValidTeamNo(value) {
+    if (value === "") {
+        return true;
     }
 
-    localStorage.setItem("daruma_playerNo", playerNo);
-    listenGameState();
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 1 && number <= 5;
+}
 
-    showLog(`参加者 ${playerNo} として待機中`);
+function updateRegisteredTeamsView() {
+    const upperText = upperPlayerNo
+        ? `右矢印 → チーム ${upperPlayerNo}`
+        : "右矢印 → 未設定";
+
+    const lowerText = lowerPlayerNo
+        ? `左矢印 ← チーム ${lowerPlayerNo}`
+        : "左矢印 ← 未設定";
+
+    registeredTeams.innerHTML = `
+        <div>${upperText}</div>
+        <div>${lowerText}</div>
+    `;
+}
+
+function activatePageFocus() {
+    upperPlayerNoInput.blur();
+    lowerPlayerNoInput.blur();
+    saveBtn.blur();
+    focusBtn.blur();
+
     document.body.tabIndex = -1;
     document.body.focus();
 }
 
+function saveSettings() {
+    const upperValue = upperPlayerNoInput.value.trim();
+    const lowerValue = lowerPlayerNoInput.value.trim();
+
+    if (!upperValue && !lowerValue) {
+        alert("少なくとも1つのチーム番号を入力してね！");
+        return;
+    }
+
+    if (!isValidTeamNo(upperValue) || !isValidTeamNo(lowerValue)) {
+        alert("チーム番号は1〜5で入力してね！");
+        return;
+    }
+
+    if (upperValue && lowerValue && upperValue === lowerValue) {
+        alert("上側と下側には別のチーム番号を設定してね！");
+        return;
+    }
+
+    upperPlayerNo = upperValue;
+    lowerPlayerNo = lowerValue;
+
+    localStorage.setItem("daruma_upperPlayerNo", upperPlayerNo);
+    localStorage.setItem("daruma_lowerPlayerNo", lowerPlayerNo);
+
+    updateRegisteredTeamsView();
+    listenGameState();
+    activatePageFocus();
+
+    showLog("設定完了：右矢印・左矢印の入力を待機中");
+}
+
 function listenGameState() {
+    if (isStateListening) {
+        return;
+    }
+
+    isStateListening = true;
+
     const stateRef = ref(db, `daruma/${ROOM_ID}/state/mode`);
 
     onValue(stateRef, (snapshot) => {
@@ -77,70 +141,74 @@ function listenGameState() {
     });
 }
 
-async function sendPlayerEvent(type) {
+async function sendMoveEvent(playerNo, inputKey) {
     if (!playerNo) {
-        showLog("先に参加者番号を設定してね！");
+        showLog(`${inputKey}側のチームが設定されていません`);
         return;
     }
 
     const now = Date.now();
 
-    if (now - lastSendTime < debounceMs) {
-        showLog("連続入力を無視しました");
-        return;
+    if (inputKey === "right") {
+        if (now - lastUpperSendTime < DEBOUNCE_MS) {
+            showLog(`チーム ${playerNo} の連続入力を無視しました`);
+            return;
+        }
+
+        lastUpperSendTime = now;
     }
 
-    lastSendTime = now;
+    if (inputKey === "left") {
+        if (now - lastLowerSendTime < DEBOUNCE_MS) {
+            showLog(`チーム ${playerNo} の連続入力を無視しました`);
+            return;
+        }
+
+        lastLowerSendTime = now;
+    }
 
     const eventRef = push(ref(db, `daruma/${ROOM_ID}/events`));
 
     await set(eventRef, {
         playerNo,
-        type,
+        type: "move",
+        inputKey,
         clientTime: now,
         createdAt: serverTimestamp()
     });
 
-    if (type === "finish") {
-        showLog(`ゴール送信：参加者 ${playerNo}`);
-    } else {
-        showLog(`動き検知送信：参加者 ${playerNo}`);
-    }
+    showLog(`動き検知送信：チーム ${playerNo}`);
 }
 
 saveBtn.addEventListener("click", saveSettings);
 
 focusBtn.addEventListener("click", () => {
-    playerNoInput.blur();
-    saveBtn.blur();
-    focusBtn.blur();
-
-    document.body.tabIndex = -1;
-    document.body.focus();
-
-    showLog("画面を有効化しました。Spaceで動き検知、Enterでゴール送信");
+    activatePageFocus();
+    showLog("画面を有効化しました。右矢印・左矢印を待機中");
 });
 
 document.addEventListener("keydown", (event) => {
-    if (event.code === "Space" || event.key === " ") {
+    if (event.code === "ArrowRight" || event.key === "ArrowRight") {
         event.preventDefault();
 
-        sendPlayerEvent("move").catch((error) => {
+        sendMoveEvent(upperPlayerNo, "right").catch((error) => {
             console.error(error);
             showLog("送信エラー：" + error.message);
         });
     }
 
-    if (event.code === "Enter" || event.key === "Enter") {
+    if (event.code === "ArrowLeft" || event.key === "ArrowLeft") {
         event.preventDefault();
 
-        sendPlayerEvent("finish").catch((error) => {
+        sendMoveEvent(lowerPlayerNo, "left").catch((error) => {
             console.error(error);
             showLog("送信エラー：" + error.message);
         });
     }
 });
 
-if (playerNo) {
+updateRegisteredTeamsView();
+
+if (upperPlayerNo || lowerPlayerNo) {
     listenGameState();
 }

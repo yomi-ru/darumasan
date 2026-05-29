@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ストップ!だるまさん 子端末</title>
+    <title>ストップ！だるまさん 子端末</title>
     <link rel="stylesheet" href="player.css" />
 </head>
 
@@ -12,18 +12,49 @@
     <main class="app">
         <h1>子端末</h1>
 
-        <label for="playerNo">参加者番号</label>
-        <input id="playerNo" type="number" placeholder="例: 1" inputmode="numeric" />
+        <section class="team-setting">
+            <div class="team-input-box upper">
+                <div class="key-label">右矢印キー →</div>
+                <label for="upperPlayerNo">上側チーム番号</label>
+                <input
+                    id="upperPlayerNo"
+                    type="number"
+                    min="1"
+                    max="5"
+                    placeholder="例：1"
+                    inputmode="numeric"
+                />
+            </div>
+
+            <div class="team-input-box lower">
+                <div class="key-label">左矢印キー ←</div>
+                <label for="lowerPlayerNo">下側チーム番号</label>
+                <input
+                    id="lowerPlayerNo"
+                    type="number"
+                    min="1"
+                    max="5"
+                    placeholder="例：2 / 未使用なら空欄"
+                    inputmode="numeric"
+                />
+            </div>
+        </section>
 
         <button id="saveBtn">設定して待機</button>
         <button id="focusBtn">この画面を有効化</button>
+
+        <div id="registeredTeams" class="registered-teams">
+            チーム未設定
+        </div>
 
         <div id="stateBox" class="status">
             現在状態
             <div id="modeText" class="big">未接続</div>
         </div>
 
-        <div class="log" id="log">スペースキー入力を待機しています</div>
+        <div class="log" id="log">
+            右矢印キー・左矢印キー入力を待機しています
+        </div>
     </main>
 
     <script type="module" src="player.js"></script>
