@@ -89,17 +89,17 @@ function saveSettings() {
     const lowerValue = lowerPlayerNoInput.value.trim();
 
     if (!upperValue && !lowerValue) {
-        alert("少なくとも1つのチーム番号を入力してね！");
+        alert("1つ以上のチーム番号を入力してください");
         return;
     }
 
     if (!isValidTeamNo(upperValue) || !isValidTeamNo(lowerValue)) {
-        alert("チーム番号は1〜5で入力してね！");
+        alert("チーム番号は1〜5で入力してください");
         return;
     }
 
     if (upperValue && lowerValue && upperValue === lowerValue) {
-        alert("上側と下側には別のチーム番号を設定してね！");
+        alert("上側と下側には別のチーム番号を設定してください");
         return;
     }
 
